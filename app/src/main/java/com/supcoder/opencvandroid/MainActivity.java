@@ -82,8 +82,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
         // 注册Camera连接状态事件监听器
         mOpenCvCameraView.setCvCameraViewListener(new CameraBridgeViewBase.CvCameraViewListener2() {
-
-
             @Override
             public void onCameraViewStarted(int width, int height) {
                 KLog.e("onCameraViewStarted width -> "+ width+"\nheight -> "+ height);
@@ -96,7 +94,6 @@ public class MainActivity extends AppCompatActivity implements ActivityCompat.On
 
             @Override
             public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-//                return inputFrame.rgba();
                 return inputFrame.gray();
             }
         });
