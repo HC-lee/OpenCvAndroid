@@ -8,6 +8,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.SurfaceView;
 import android.view.WindowManager;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 
 import com.socks.library.KLog;
 import com.supcoder.opencvandroid.base.BaseActivity;
@@ -31,6 +33,10 @@ import io.reactivex.disposables.Disposable;
 public class CameraActivity extends BaseActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     private JavaCameraView cameraView;
+
+    private RadioGroup radioGroup;
+
+    private int type = 0;
 
     private LoaderCallbackInterface mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -68,6 +74,9 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
     public void initView() {
         cameraView = findViewById(R.id.cameraView);
         cameraView.setVisibility(SurfaceView.VISIBLE);
+
+        radioGroup = findViewById(R.id.radioGroup);
+        radioGroup.check(R.id.normalRadio);
     }
 
 
@@ -87,7 +96,30 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
 
             @Override
             public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-                return inputFrame.gray();
+                if (type == 0){
+                    return inputFrame.rgba();
+                }else if (type == 1){
+                    return inputFrame.gray();
+                }
+                return inputFrame.rgba();
+            }
+        });
+
+        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                switch (i) {
+                    case R.id.normalRadio:
+                        type = 0;
+                        break;
+                    case R.id.greyRadio:
+                        type = 1;
+                        break;
+                    default:
+                        break;
+                }
+
+
             }
         });
     }
@@ -99,7 +131,7 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
         initPermission();
     }
 
-    private void initPermission(){
+    private void initPermission() {
         RxPermissions rxPermissions = new RxPermissions(this);
         rxPermissions.request(Manifest.permission.CAMERA)
                 .subscribe(new Observer<Boolean>() {
@@ -110,7 +142,7 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
 
                     @Override
                     public void onNext(Boolean aBoolean) {
-                        if (aBoolean){
+                        if (aBoolean) {
                             //OpenCVLoader.initDebug()静态加载OpenCV库
                             if (!OpenCVLoader.initDebug()) {
                                 KLog.e("静态加载OpenCV库失败，尝试动态加载！");

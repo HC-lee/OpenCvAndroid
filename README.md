@@ -6,3 +6,5 @@ OpenCV练手Demo
 1.Camera功能；
 
 2.Ocr进行图片文字识别；
+
+3.图像处理功能；

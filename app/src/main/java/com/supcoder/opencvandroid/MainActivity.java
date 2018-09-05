@@ -45,6 +45,14 @@ public class MainActivity extends BaseActivity {
                 startActivity(intent);
             }
         });
+        findViewById(R.id.bitmapBtn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent = new Intent();
+                intent.setClass(MainActivity.this, BitmapActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
 

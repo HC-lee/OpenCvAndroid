@@ -13,4 +13,25 @@
         android:visibility="gone"
         app:camera_id="any"
         app:show_fps="true" />
+
+    <RadioGroup
+        android:id="@+id/radioGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/normalRadio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="正常" />
+
+        <RadioButton
+            android:id="@+id/greyRadio"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:text="灰色" />
+    </RadioGroup>
 </FrameLayout>

@@ -17,7 +17,6 @@
         android:name="android.hardware.camera.front.autofocus"
         android:required="false" />
 
-
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -36,7 +35,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <provider
             android:name="android.support.v4.content.FileProvider"
             android:authorities="com.supcoder.opencvandroid.fileprovider"
@@ -57,8 +55,8 @@
         <activity
             android:name=".CameraActivity"
             android:screenOrientation="landscape" />
-
         <activity android:name=".OcrActivity" />
+        <activity android:name=".BitmapActivity"></activity>
     </application>
 
 </manifest>

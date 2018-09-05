@@ -4,19 +4,14 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
 
-import com.googlecode.tesseract.android.TessBaseAPI;
 import com.socks.library.KLog;
 import com.supcoder.opencvandroid.base.BaseActivity;
 import com.supcoder.opencvandroid.utils.img.Glide4Engine;
@@ -30,11 +25,12 @@ import com.zhihu.matisse.listener.OnSelectedListener;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 
 import io.reactivex.Observer;
@@ -43,22 +39,39 @@ import me.shaohui.advancedluban.Luban;
 import me.shaohui.advancedluban.OnCompressListener;
 
 /**
+ * 图像处理的Activity
+ *
  * @author lee
  */
-public class OcrActivity extends BaseActivity {
+public class BitmapActivity extends BaseActivity {
 
     private static final int REQUEST_CODE_CHOOSE = 23;
 
-    private TessBaseAPI baseAPI;
     private String path = "";
     private Uri fileUri;
 
-    private Button chooseImgBtn, recognizeBtn;
-    private TextView recognizedTv, timeTv;
-    private ImageView chooseImg;
+    private Button chooseBtn, greyBtn, binarizationBtn;
+
+    private ImageView originalImg, processedImg;
 
     private RxPermissions rxPermissions;
 
+
+    private LoaderCallbackInterface mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                // OpenCV引擎初始化加载成功
+                case LoaderCallbackInterface.SUCCESS:
+                    KLog.e("OpenCV加载成功");
+                    // 连接到Camera
+                    break;
+                default:
+                    super.onManagerConnected(status);
+                    break;
+            }
+        }
+    };
 
 
     @Override
@@ -72,80 +85,89 @@ public class OcrActivity extends BaseActivity {
 
     @Override
     public int getLayoutId() {
-        return R.layout.activity_ocr;
+        return R.layout.activity_bitmap;
     }
 
     @Override
     public void initParams() {
         rxPermissions = new RxPermissions(this);
-        initTessBase();
     }
-
 
     @Override
     public void initView() {
-        chooseImgBtn = findViewById(R.id.chooseImgBtn);
-        recognizeBtn = findViewById(R.id.recognizeBtn);
-
-        recognizedTv = findViewById(R.id.recognizedTv);
-        timeTv = findViewById(R.id.timeTv);
-
-        chooseImg = findViewById(R.id.chooseImg);
+        chooseBtn = findViewById(R.id.chooseBtn);
+        greyBtn = findViewById(R.id.greyBtn);
+        binarizationBtn = findViewById(R.id.binarizationBtn);
+        originalImg = findViewById(R.id.originalImg);
+        processedImg = findViewById(R.id.processedImg);
     }
-
-
-    private boolean isRecognizing = false;
 
     @Override
     public void bindEvent() {
-        chooseImgBtn.setOnClickListener(new View.OnClickListener() {
+        chooseBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 choosePic();
             }
         });
-
-        recognizeBtn.setOnClickListener(new View.OnClickListener() {
+        greyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!isRecognizing) {
-                    isRecognizing = true;
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            recognizeTextImage();
-                            isRecognizing = false;
-                        }
-                    }).start();
-                } else {
-                    Toast.makeText(OcrActivity.this, "正在识别图片中", Toast.LENGTH_SHORT).show();
-                }
+                bitmapGrey(getBitMBitmap(fileUri));
+            }
+        });
+
+        binarizationBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                bitmapBinarization(getBitMBitmap(fileUri));
             }
         });
     }
 
 
-    private void recognizeTextImage() {
-        long startTime = System.currentTimeMillis();
-        if (fileUri == null) {
-            KLog.e("没有获取到图片路径");
-            return;
-        }
-        Bitmap bmp = BitmapFactory.decodeFile(fileUri.getPath());
-        baseAPI.setImage(bmp);
-        final String recognizedText = baseAPI.getUTF8Text();
-        final long timeConsume = System.currentTimeMillis() - startTime;
-        if (!TextUtils.isEmpty(recognizedText)) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    recognizedTv.setText(recognizedText);
-                    timeTv.setText("(" + timeConsume + "ms)");
-                }
-            });
-        } else {
-            KLog.e("识别失败");
-        }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        initPermission();
+    }
+
+    private void initPermission(){
+        RxPermissions rxPermissions = new RxPermissions(this);
+        rxPermissions.request(Manifest.permission.CAMERA)
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
+
+                    }
+
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        if (aBoolean){
+                            //OpenCVLoader.initDebug()静态加载OpenCV库
+                            if (!OpenCVLoader.initDebug()) {
+                                KLog.e("静态加载OpenCV库失败，尝试动态加载！");
+                                //OpenCVLoader.initAsync()为动态加载OpenCV库，即需要安装OpenCV Manager
+                                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, BitmapActivity.this, mLoaderCallback);
+                            } else {
+                                KLog.e("找到了OpenCV的库，开始使用！");
+                                mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+                            }
+                        }
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
 
@@ -162,7 +184,7 @@ public class OcrActivity extends BaseActivity {
                     public void onSuccess(File file) {
                         path = file.getPath();
                         fileUri = Uri.fromFile(file);
-                        chooseImg.setImageURI(fileUri);
+                        originalImg.setImageBitmap(getBitMBitmap(fileUri));
                     }
 
                     @Override
@@ -183,7 +205,7 @@ public class OcrActivity extends BaseActivity {
                     @Override
                     public void onNext(Boolean aBoolean) {
                         if (aBoolean) {
-                            Matisse.from(OcrActivity.this)
+                            Matisse.from(BitmapActivity.this)
                                     .choose(MimeType.ofAll(), false)
                                     .countable(true)
                                     .capture(true)
@@ -227,56 +249,57 @@ public class OcrActivity extends BaseActivity {
     }
 
 
-    private void initTessBase() {
-        rxPermissions.request(Manifest.permission.WRITE_EXTERNAL_STORAGE).subscribe(new Observer<Boolean>() {
-            @Override
-            public void onSubscribe(Disposable d) {
-            }
-
-            @Override
-            public void onNext(Boolean aBoolean) {
-                if (aBoolean) {
-                    try {
-                        initTessBaseAPI();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-            @Override
-            public void onError(Throwable e) {
-            }
-
-            @Override
-            public void onComplete() {
-            }
-        });
+    private void bitmapBinarization(Bitmap bmp) {
+        if (bmp == null) {
+            return;
+        }
+        Mat rgbMat = new Mat();
+        Mat grayMat = new Mat();
+        //获取lena彩色图像所对应的像素数据
+        Utils.bitmapToMat(bmp, rgbMat);
+        //将彩色图像数据转换为灰度图像数据并存储到grayMat中
+        Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
+        //创建一个灰度图像
+        Bitmap grayBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.RGB_565);
+        //将矩阵grayMat转换为灰度图像
+        Utils.matToBitmap(grayMat, grayBmp);
+        processedImg.setImageBitmap(grayBmp);
     }
 
-    private void initTessBaseAPI() throws IOException {
-        baseAPI = new TessBaseAPI();
-        String dataPath = Environment.getExternalStorageDirectory() + File.separator + "tesseract" + File.separator;
-        File dir = new File(dataPath + "tessdata" + File.separator);
-        if (!dir.exists()) {
-            dir.mkdirs();
-            InputStream inputStream = getResources().openRawResource(R.raw.eng);
-
-            File file = new File(dir, "eng.traineddata");
-            FileOutputStream outputStream = new FileOutputStream(file);
-            byte[] buff = new byte[1024];
-            int len = 0;
-            while ((len = inputStream.read(buff)) != -1) {
-                outputStream.write(buff, 0, len);
-            }
-            inputStream.close();
-            outputStream.close();
+    private void bitmapGrey(Bitmap bmp) {
+        if (bmp == null) {
+            return;
         }
-        boolean isSuccess = baseAPI.init(dataPath, "eng");
-        if (isSuccess) {
-            KLog.d("初始化ocr成功");
-        } else {
-            KLog.d("初始化ocr失败");
-        }
+        Mat rgbMat = new Mat();
+        Mat grayMat = new Mat();
+        //获取lena彩色图像所对应的像素数据
+        Utils.bitmapToMat(bmp, rgbMat);
+        //将彩色图像数据转换为灰度图像数据并存储到grayMat中
+        Imgproc.cvtColor(rgbMat, grayMat, Imgproc.COLOR_RGB2GRAY);
+        //创建一个灰度图像
+        Bitmap grayBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.RGB_565);
+        //将矩阵grayMat转换为灰度图像
+        Utils.matToBitmap(grayMat, grayBmp);
+        processedImg.setImageBitmap(grayBmp);
     }
+
+
+
+    /**
+     * 根据路径 转bitmap
+     *
+     * @param urlpath
+     * @return
+     */
+    public Bitmap getBitMBitmap(Uri urlpath) {
+        Bitmap bitmap = null;
+        try {
+            bitmap = MediaStore.Images.Media.getBitmap(getContentResolver(), urlpath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bitmap;
+    }
+
+
 }
