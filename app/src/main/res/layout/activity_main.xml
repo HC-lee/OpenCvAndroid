@@ -4,9 +4,19 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:padding="16dp"
+    android:orientation="vertical"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
+    <Button
+        android:id="@+id/cameraBtn"
+        android:text="相机"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
-
+    <Button
+        android:id="@+id/ocrRecognizeBtn"
+        android:text="OCR识别"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
 </LinearLayout>

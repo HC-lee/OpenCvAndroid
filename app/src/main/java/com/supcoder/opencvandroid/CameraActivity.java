@@ -10,6 +10,8 @@ import android.view.SurfaceView;
 import android.view.WindowManager;
 
 import com.socks.library.KLog;
+import com.supcoder.opencvandroid.base.BaseActivity;
+import com.tbruyelle.rxpermissions2.RxPermissions;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
@@ -18,32 +20,17 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Mat;
 
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+
 /**
  * openCV实现相机
  *
  * @author lee
  */
-public class CameraActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
+public class CameraActivity extends BaseActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
-    private static final int REQUEST_CAMERA_PERMISSION = 1;
-
-
-    JavaCameraView cameraView;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        // 全屏显示
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        setContentView(R.layout.activity_camera);
-        initView();
-        bindEvent();
-    }
-
-    private void initView() {
-        cameraView = findViewById(R.id.cameraView);
-        cameraView.setVisibility(SurfaceView.VISIBLE);
-    }
+    private JavaCameraView cameraView;
 
     private LoaderCallbackInterface mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -62,7 +49,30 @@ public class CameraActivity extends AppCompatActivity implements ActivityCompat.
         }
     };
 
-    private void bindEvent() {
+    @Override
+    public void beforeSetViewInit() {
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+    }
+
+    @Override
+    public int getLayoutId() {
+        return R.layout.activity_camera;
+    }
+
+    @Override
+    public void initParams() {
+
+    }
+
+    @Override
+    public void initView() {
+        cameraView = findViewById(R.id.cameraView);
+        cameraView.setVisibility(SurfaceView.VISIBLE);
+    }
+
+
+    @Override
+    public void bindEvent() {
         // 注册Camera连接状态事件监听器
         cameraView.setCvCameraViewListener(new CameraBridgeViewBase.CvCameraViewListener2() {
             @Override
@@ -83,31 +93,47 @@ public class CameraActivity extends AppCompatActivity implements ActivityCompat.
     }
 
 
-    /**
-     * OpenCVLoader.initDebug()静态加载OpenCV库
-     * OpenCVLoader.initAsync()为动态加载OpenCV库，即需要安装OpenCV Manager
-     */
     @Override
     protected void onResume() {
         super.onResume();
+        initPermission();
+    }
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED) {
-            if (!OpenCVLoader.initDebug()) {
-                KLog.e("静态加载OpenCV库失败，尝试动态加载！");
-                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this, mLoaderCallback);
-            } else {
-                KLog.e("找到了OpenCV的库，开始使用！");
-                mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-            }
-        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.CAMERA)) {
+    private void initPermission(){
+        RxPermissions rxPermissions = new RxPermissions(this);
+        rxPermissions.request(Manifest.permission.CAMERA)
+                .subscribe(new Observer<Boolean>() {
+                    @Override
+                    public void onSubscribe(Disposable d) {
 
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
-                    REQUEST_CAMERA_PERMISSION);
-            KLog.e("请求相机权限");
-        }
+                    }
+
+                    @Override
+                    public void onNext(Boolean aBoolean) {
+                        if (aBoolean){
+                            //OpenCVLoader.initDebug()静态加载OpenCV库
+                            if (!OpenCVLoader.initDebug()) {
+                                KLog.e("静态加载OpenCV库失败，尝试动态加载！");
+                                //OpenCVLoader.initAsync()为动态加载OpenCV库，即需要安装OpenCV Manager
+                                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, CameraActivity.this, mLoaderCallback);
+                            } else {
+                                KLog.e("找到了OpenCV的库，开始使用！");
+                                mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+                            }
+                        }
+
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+
+                    }
+
+                    @Override
+                    public void onComplete() {
+
+                    }
+                });
     }
 
     @Override
