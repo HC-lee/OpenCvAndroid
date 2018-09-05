@@ -14,24 +14,73 @@
         app:camera_id="any"
         app:show_fps="true" />
 
-    <RadioGroup
-        android:id="@+id/radioGroup"
-        android:layout_width="wrap_content"
+
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:orientation="horizontal">
 
-        <RadioButton
-            android:id="@+id/normalRadio"
+        <CheckBox
+            android:id="@+id/colorCheckBox"
+            android:text="彩色"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="正常" />
+            android:layout_height="wrap_content" />
 
-        <RadioButton
-            android:id="@+id/greyRadio"
+        <RadioGroup
+            android:id="@+id/directionRadioGroup"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
-            android:text="灰色" />
-    </RadioGroup>
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/rearRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="后置摄像头" />
+
+            <RadioButton
+                android:id="@+id/preRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="前置摄像头" />
+
+
+        </RadioGroup>
+
+        <RadioGroup
+            android:id="@+id/processRadioGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton
+                android:id="@+id/invertRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="相反" />
+
+            <RadioButton
+                android:id="@+id/edgeRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="边缘" />
+
+            <RadioButton
+                android:id="@+id/sobelRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="索贝尔" />
+            <RadioButton
+                android:id="@+id/blurRadio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="模糊" />
+
+        </RadioGroup>
+
+    </LinearLayout>
+
 </FrameLayout>

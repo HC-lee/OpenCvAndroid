@@ -56,7 +56,8 @@
             android:name=".CameraActivity"
             android:screenOrientation="landscape" />
         <activity android:name=".OcrActivity" />
-        <activity android:name=".BitmapActivity"></activity>
+        <activity android:name=".BitmapActivity" />
+        <activity android:name=".OcrCameraActivity"></activity>
     </application>
 
 </manifest>

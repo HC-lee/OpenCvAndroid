@@ -1,6 +1,8 @@
 package com.supcoder.opencvandroid;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -8,6 +10,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.SurfaceView;
 import android.view.WindowManager;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 
@@ -20,7 +24,11 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 
 import io.reactivex.Observer;
 import io.reactivex.disposables.Disposable;
@@ -34,9 +42,11 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
 
     private JavaCameraView cameraView;
 
-    private RadioGroup radioGroup;
+    private RadioGroup directionRadioGroup, processRadioGroup;
 
-    private int type = 0;
+    private CheckBox colorCheckBox;
+
+    private int processType = 0;
 
     private LoaderCallbackInterface mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -75,8 +85,15 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
         cameraView = findViewById(R.id.cameraView);
         cameraView.setVisibility(SurfaceView.VISIBLE);
 
-        radioGroup = findViewById(R.id.radioGroup);
-        radioGroup.check(R.id.normalRadio);
+        colorCheckBox = findViewById(R.id.colorCheckBox);
+        directionRadioGroup = findViewById(R.id.directionRadioGroup);
+        processRadioGroup = findViewById(R.id.processRadioGroup);
+
+
+        directionRadioGroup.check(R.id.rearRadio);
+
+        colorCheckBox.setChecked(true);
+
     }
 
 
@@ -96,30 +113,68 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
 
             @Override
             public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-                if (type == 0){
-                    return inputFrame.rgba();
-                }else if (type == 1){
-                    return inputFrame.gray();
+                Mat frame = new Mat();
+                if (colorCheckBox.isChecked()) {
+                    frame = inputFrame.rgba();
+                } else {
+                    frame = inputFrame.gray();
                 }
-                return inputFrame.rgba();
+                process(frame);
+                if (getResources().getConfiguration().orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+                    Core.rotate(frame, frame, Core.ROTATE_90_CLOCKWISE);
+                }
+                return frame;
             }
         });
 
-        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+
+        directionRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup radioGroup, int i) {
                 switch (i) {
-                    case R.id.normalRadio:
-                        type = 0;
+                    case R.id.preRadio:
+                        cameraView.setCameraIndex(1);
                         break;
-                    case R.id.greyRadio:
-                        type = 1;
+                    case R.id.rearRadio:
+                        cameraView.setCameraIndex(0);
                         break;
                     default:
                         break;
                 }
+                if (cameraView != null) {
+                    cameraView.disableView();
+                }
+                cameraView.enableView();
+            }
+        });
 
+        processRadioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                switch (i) {
+                    case R.id.invertRadio:
+                        processType = 1;
+                        break;
+                    case R.id.edgeRadio:
+                        processType = 2;
+                        break;
+                    case R.id.sobelRadio:
+                        processType = 3;
+                        break;
+                    case R.id.blurRadio:
+                        processType = 4;
+                        break;
+                    default:
+                        processType = 0;
+                        break;
+                }
+            }
+        });
 
+        colorCheckBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                colorCheckBox.setText(b?"彩色":"灰色");
             }
         });
     }
@@ -183,6 +238,42 @@ public class CameraActivity extends BaseActivity implements ActivityCompat.OnReq
         // 断开与Camera的连接
         if (cameraView != null) {
             cameraView.disableView();
+        }
+    }
+
+
+    private void process(Mat frame) {
+        switch (processType) {
+            case 0:
+                break;
+            case 1:
+                Core.bitwise_not(frame, frame);
+                break;
+            case 2:
+                Mat edges = new Mat();
+                Imgproc.Canny(frame, edges, 100, 200, 3, false);
+                Mat result = Mat.zeros(frame.size(), frame.type());
+                frame.copyTo(result, edges);
+                result.copyTo(frame);
+                edges.release();
+                result.release();
+                break;
+            case 3:
+                Mat gradx = new Mat();
+                Imgproc.Sobel(frame, gradx, CvType.CV_32F, 1, 0);
+                Core.convertScaleAbs(gradx, gradx);
+                gradx.copyTo(frame);
+                gradx.release();
+                break;
+            case 4:
+                Mat temp = new Mat();
+                Imgproc.blur(frame, temp, new Size(15, 15));
+                temp.copyTo(frame);
+                temp.release();
+                break;
+
+            default:
+                break;
         }
     }
 }
